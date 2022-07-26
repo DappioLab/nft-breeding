@@ -66,11 +66,11 @@ pub mod nft_breeding {
         random_seed.extend_from_slice(&ctx.accounts.slot_history.to_account_info().data.borrow());
         let random = hash(&random_seed).to_bytes().to_vec();
         let mut new_attributes: Vec<Vec<u8>> = vec![];
-        for index in 0..random.len() {
-            if index % 2 == 0 {
+        for index in 0..ctx.accounts.parent_a_breeding_meta.attributes.len() {
+            if random[index] % 2 == 0 {
                 new_attributes.push(ctx.accounts.parent_a_breeding_meta.attributes[index].clone())
             }
-            if index % 2 == 1 {
+            if random[index] % 2 == 1 {
                 new_attributes.push(ctx.accounts.parent_b_breeding_meta.attributes[index].clone())
             }
         }
