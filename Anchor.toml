@@ -1,0 +1,14 @@
+[features]
+seeds = false
+[programs.localnet]
+nft_breeding = "B91y1sRzsHMCgDkaxeHyembZ63Gpd13DbNi6iX2HCseh"
+
+[registry]
+url = "https://anchor.projectserum.com"
+
+[provider]
+cluster = "localnet"
+wallet = "/Users/wei-dappio/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
