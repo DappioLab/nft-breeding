@@ -4,22 +4,23 @@ use anchor_lang::solana_program::hash::{hash, Hash};
 use anchor_lang::solana_program::system_program;
 use anchor_spl::associated_token::get_associated_token_address;
 use anchor_spl::token::{
-    self, CloseAccount, InitializeMint, Mint, SetAuthority, Token, TokenAccount, Transfer,Burn
+    self, Burn, CloseAccount, InitializeMint, Mint, SetAuthority, Token, TokenAccount, Transfer,
 };
 use mpl_token_metadata::state::Metadata;
 use mpl_token_metadata::{pda::find_metadata_account, state::TokenMetadataAccount};
 
-use anchor_lang::solana_program::{slot_hashes, program::invoke};
+use anchor_lang::solana_program::{program::invoke, slot_hashes};
 use mpl_token_metadata::state::Creator;
 declare_id!("B91y1sRzsHMCgDkaxeHyembZ63Gpd13DbNi6iX2HCseh");
 
 #[program]
 pub mod nft_breeding {
 
+    use anchor_lang::solana_program::program::invoke_signed;
 
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>, attributes: Vec<Vec<u8>>) -> Result<()> {
+    pub fn initialize(ctx: Context<Initialize>, bump: u8, attributes: Vec<Vec<u8>>) -> Result<()> {
         let metadata_account: Metadata =
             Metadata::from_account_info(&ctx.accounts.token_metadata.to_account_info()).unwrap();
         //generate hash
@@ -41,10 +42,11 @@ pub mod nft_breeding {
         ctx.accounts.breeding_meta.parent_b = system_program::id();
         ctx.accounts.breeding_meta.attributes = attributes.clone();
         ctx.accounts.breeding_meta.uri = metadata_account.data.uri.as_bytes().to_vec();
-        ctx.accounts.breeding_meta.breeding = false;
+        ctx.accounts.breeding_meta.breeding = true;
+        ctx.accounts.breeding_meta.bump = bump;
         Ok(())
     }
-    pub fn compute(ctx: Context<Compute>) -> Result<()> {
+    pub fn compute(ctx: Context<Compute>, bump: u8) -> Result<()> {
         //decide new attributes
         let mut random_seed: Vec<u8> = vec![0];
         random_seed.extend_from_slice(
@@ -126,13 +128,14 @@ pub mod nft_breeding {
             ctx.accounts.parent_b_breeding_meta.mint.clone();
         ctx.accounts.child_breeding_meta.attributes = new_attributes.clone();
         ctx.accounts.child_breeding_meta.breeding = false;
+        ctx.accounts.child_breeding_meta.bump = bump;
         Ok(())
     }
     pub fn mint(ctx: Context<Mint_child>) -> Result<()> {
-        let creators = Creator{
-            share:20,
-            address:ctx.accounts.child_breeding_meta.key(),
-            verified:false,
+        let creators = Creator {
+            share: 100,
+            address: ctx.accounts.child_breeding_meta.key(),
+            verified: false,
         };
         let create_metadata_ins = mpl_token_metadata::instruction::create_metadata_accounts_v3(
             mpl_token_metadata::ID,
@@ -144,7 +147,7 @@ pub mod nft_breeding {
             "".to_string(),
             ctx.accounts.child_breeding_meta.hash.to_string(),
             "".to_string(),
-            Some(vec![creators]) ,
+            Some(vec![creators]),
             0,
             false,
             true,
@@ -153,9 +156,32 @@ pub mod nft_breeding {
             None,
         );
         invoke(&create_metadata_ins, &ctx.accounts.to_account_infos())?;
+        let master_edition_ix = mpl_token_metadata::instruction::create_master_edition_v3(
+            mpl_token_metadata::ID,
+            ctx.accounts.new_token_master_edition.key(),
+            ctx.accounts.new_token.key(),
+            ctx.accounts.child_breeding_meta.key(),
+            ctx.accounts.payer.key(),
+            ctx.accounts.new_token_metadata.key(),
+            ctx.accounts.payer.key(),
+            None,
+        );
+        invoke_signed(
+            &master_edition_ix,
+            &ctx.accounts.to_account_infos(),
+            &[&[
+                b"breeding",
+                &ctx.accounts.child_breeding_meta.authority.key().to_bytes(),
+                &ctx.accounts.new_token.key().to_bytes(),
+                &ctx.accounts.child_breeding_meta.bump.to_le_bytes(),
+            ]],
+        )?;
         anchor_spl::token::burn(ctx.accounts.burn_parent_a_token_from_owner(), 1)?;
         anchor_spl::token::burn(ctx.accounts.burn_parent_b_token_from_owner(), 1)?;
-
+        ctx.accounts.child_breeding_meta.breeding = false;
+        Ok(())
+    }
+    pub fn update_uri(ctx: Context<Mint_child>) -> Result<()> {
         Ok(())
     }
 }
@@ -168,7 +194,7 @@ pub struct Initialize<'info> {
     pub token_metadata: AccountInfo<'info>,
     #[account(
         init,
-        seeds = [b"gateway".as_ref(),&authority.key().as_ref(), &token_mint.key().as_ref()],
+        seeds = [b"breeding".as_ref(),&authority.key().as_ref(), &token_mint.key().as_ref()],
         bump,
         payer = authority,
         space = 1000
@@ -186,7 +212,7 @@ pub struct Compute<'info> {
     pub new_token: Box<Account<'info, Mint>>,
     #[account(
         init,
-        seeds = [b"gateway".as_ref(),&parent_a_breeding_meta.authority.key().as_ref(), &new_token.key().as_ref()],
+        seeds = [b"breeding".as_ref(),&parent_a_breeding_meta.authority.key().as_ref(), &new_token.key().as_ref()],
         bump,
         payer = payer,
         space = 1000
@@ -196,7 +222,6 @@ pub struct Compute<'info> {
         constraint = parent_a_token_account.owner == payer.key(),
         constraint = parent_a_token_account.mint == parent_a_breeding_meta.mint,
         constraint = parent_a_token_account.amount > 0,
-        
     )]
     pub parent_a_token_account: Box<Account<'info, TokenAccount>>,
     #[account(mut,
@@ -242,10 +267,7 @@ pub struct Mint_child<'info> {
 impl<'info> Mint_child<'info> {
     fn burn_parent_a_token_from_owner(&self) -> CpiContext<'_, '_, '_, 'info, Burn<'info>> {
         let cpi_accounts = Burn {
-            mint: self
-                .parent_a_token_mint
-                .to_account_info()
-                .clone(),
+            mint: self.parent_a_token_mint.to_account_info().clone(),
             from: self.parent_a_token_account.to_account_info().clone(),
             authority: self.payer.to_account_info().clone(),
         };
@@ -253,10 +275,7 @@ impl<'info> Mint_child<'info> {
     }
     fn burn_parent_b_token_from_owner(&self) -> CpiContext<'_, '_, '_, 'info, Burn<'info>> {
         let cpi_accounts = Burn {
-            mint: self
-                .parent_b_token_mint
-                .to_account_info()
-                .clone(),
+            mint: self.parent_b_token_mint.to_account_info().clone(),
             from: self.parent_b_token_account.to_account_info().clone(),
             authority: self.payer.to_account_info().clone(),
         };
@@ -274,4 +293,5 @@ pub struct BreedingMeta {
     pub parent_b: Pubkey,
     pub attributes: Vec<Vec<u8>>,
     pub breeding: bool,
+    pub bump: u8,
 }
