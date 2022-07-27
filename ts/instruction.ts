@@ -138,7 +138,7 @@ export async function mintChildIx(
     rent: anchor.web3.SYSVAR_RENT_PUBKEY,
     tokenProgram: TOKEN_PROGRAM_ID,
     metadataProgram: TOKEN_METADATA_PROGRAM_ID,
-    SystemProgram: anchor.web3.SystemProgram.programId
+    systemProgram: anchor.web3.SystemProgram.programId
   })
   .instruction();
 
