@@ -112,3 +112,52 @@ import {
       )
     ;
   }
+
+  export function readAttrsFromUri(
+    path: string,
+  ): string[] {
+    const attribute: string[] = [];
+  
+    const rawData = fs.readFileSync(path, "utf-8");
+    const data: nftMint = JSON.parse(rawData);
+    data.attributes.forEach((element) => {
+        attribute.push(element.value);
+    });
+  
+    return attribute;
+  }
+
+  interface nftMint {
+    name: string;
+    symbol: string;
+    description: string;
+    seller_fee_basis_points: string;
+    external_url: string;
+    attributes: attribute[];
+    collection: collecntion;
+    properties: properties;
+  }
+
+  interface attribute {
+    trait_type: string;
+    value: string;
+  }
+  interface collecntion {
+    name: string;
+    family: string;
+  }
+  interface properties {
+    files: file[];
+    category: string;
+    maxSupply: number;
+    creators: creator;
+    image: string;
+  }
+  interface file {
+    uri: string;
+    type: string;
+  }
+  interface creator {
+    address: string;
+    share: number;
+  }
