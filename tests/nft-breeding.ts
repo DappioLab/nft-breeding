@@ -138,7 +138,8 @@ describe("NFT Breeding", () => {
     mintChildTxn.feePayer = wallet.publicKey;
     mintChildTxn.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
     console.log(mintChildTxn.serializeMessage().toString("base64"));
-
+    let simulation = await provider.simulate(mintChildTxn,[wallet.payer]);
+    console.log("simulation:", simulation);
     // const result = await provider.sendAndConfirm(mintChildTxn, [wallet.payer]);
     // console.log("mint child txn:", result);
   });
