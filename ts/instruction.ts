@@ -23,15 +23,19 @@ export async function initializeIx(
   attributes: string[], 
   provider: anchor.AnchorProvider
   ){
+    console.log("check 0");
   const nftBreedingProgram = new anchor.Program(
     nftBreedingIDL,
     NFT_BREEDING_PROGRAM_ID,
     provider
   );
+  console.log("check 1");
+  
 
   const nftMetadata = (await findTokenMetadataAddress(nftMint))[0];
   const [breedingMeta, bump] = await findBreedingMeta(userKey, nftMint);
 
+  console.log("check 2");
   const ix = await nftBreedingProgram.methods.initialize(bump, attributes)
   .accounts({
     authority: userKey,
@@ -42,6 +46,7 @@ export async function initializeIx(
   })
   .instruction()
 
+  console.log("check 3");
   return ix;
 }
 
