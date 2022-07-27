@@ -359,6 +359,6 @@ pub fn hash_to_fix_len(
     let encoded = hex::encode(hash(hash_data));
     let src = encoded.as_bytes();
     let mut hash_value = [0u8; 32];
-    hash_value[..src.len()].copy_from_slice(src);
+    hash_value[..].copy_from_slice(&src[..32]);
     hash_value
 }
