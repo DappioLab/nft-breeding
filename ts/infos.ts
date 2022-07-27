@@ -27,26 +27,45 @@ export async function fetchBreedingMetaByParent(
         provider
       );
     
-      const ParentAMemcmp = {
+      let ParentAMemcmp = {
         memcmp: {
           offset: 105, // 8 + 32 + 1 + 32 * 2
           bytes: parentAMint.toString(),
         },
       };
-      const ParentBMemcmp = {
+      let ParentBMemcmp = {
         memcmp: {
           offset: 137, // 8 + 32 + 1 + 32 * 3
           bytes: parentBMint.toString(),
         },
       };
 
-      const filter = [ParentAMemcmp, ParentBMemcmp];
+    let filter = [ParentAMemcmp, ParentBMemcmp];
     
     const breedingMeta = await nftBreedingProgram.account.breedingMeta.all(filter);
     if(breedingMeta){
         return breedingMeta[0];
     }else{
+      let ParentAMemcmp = {
+        memcmp: {
+          offset: 137, // 8 + 32 + 1 + 32 * 3
+          bytes: parentAMint.toString(),
+        },
+      };
+      let ParentBMemcmp = {
+        memcmp: {
+          offset: 105, // 8 + 32 + 1 + 32 * 2
+          bytes: parentBMint.toString(),
+        },
+      };
+      filter = [ParentAMemcmp, ParentBMemcmp];
+    
+      const breedingMeta = await nftBreedingProgram.account.breedingMeta.all(filter);
+      if(breedingMeta){
+        return breedingMeta[0];
+      }else{  
         return null;
+      }
     }
 }
 
