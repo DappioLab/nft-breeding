@@ -138,23 +138,20 @@ pub mod nft_breeding {
             address: ctx.accounts.child_breeding_meta.key(),
             verified: false,
         };
-        let create_metadata_ins = mpl_token_metadata::instruction::create_metadata_accounts_v3(
+        let create_metadata_ins = mpl_token_metadata::instruction::create_metadata_accounts(
             mpl_token_metadata::ID,
             ctx.accounts.new_token_metadata.key(),
             ctx.accounts.new_token.key(),
             ctx.accounts.payer.key(),
             ctx.accounts.payer.key(),
             ctx.accounts.child_breeding_meta.key(),
-            "SolMeet".to_string(),
             String::from_utf8(ctx.accounts.child_breeding_meta.hash.to_vec()).unwrap(),
-            "SolMeet".to_string(),
+            "".to_string(),
+            "".to_string(),
             Some(vec![creators]),
             0,
             false,
             true,
-            None,
-            None,
-            None,
         );
         invoke(&create_metadata_ins, &ctx.accounts.to_account_infos())?;
         let master_edition_ix = mpl_token_metadata::instruction::create_master_edition_v3(
