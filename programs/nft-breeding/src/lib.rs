@@ -42,6 +42,7 @@ pub mod nft_breeding {
         ctx.accounts.breeding_meta.bump = bump;
         Ok(())
     }
+    
     pub fn compute(ctx: Context<Compute>, bump: u8) -> Result<()> {
         //decide new attributes
         let mut random_seed: Vec<u8> = vec![0];
@@ -130,6 +131,7 @@ pub mod nft_breeding {
         ctx.accounts.child_breeding_meta.bump = bump;
         Ok(())
     }
+
     pub fn mint(ctx: Context<Mint_child>) -> Result<()> {
         let creators = Creator {
             share: 100,
