@@ -6,7 +6,6 @@ import {
   MemcmpFilter,
   GetProgramAccountsConfig,
   DataSizeFilter,
-  Keypair
 } from "@solana/web3.js";
 import { createInitializeMintInstruction, createMint, createMintToInstruction, getAccount, getMinimumBalanceForRentExemptMint, MINT_SIZE, TOKEN_PROGRAM_ID } from "@solana/spl-token";
 import { hex } from "@project-serum/anchor/dist/cjs/utils/bytes";
@@ -51,6 +50,7 @@ export async function computeIx(
   userKey: PublicKey, 
   parentAMint: PublicKey, 
   parentBMint: PublicKey,
+  childMint: PublicKey,
   provider: anchor.AnchorProvider
   ){
   const nftBreedingProgram = new anchor.Program(
@@ -67,21 +67,20 @@ export async function computeIx(
   const parentABreedingMetadata = (await findBreedingMeta(userKey, parentAMint))[0];
   const parentBBreedingMetadata = (await findBreedingMeta(userKey, parentBMint))[0];
 
-  const newTokenMint = Keypair.generate().publicKey;
-  const [childBreedingMeta, bump] = await findBreedingMeta(userKey, newTokenMint);
+  const [childBreedingMeta, bump] = await findBreedingMeta(userKey, childMint);
   const createAccountIx = SystemProgram.createAccount({
     fromPubkey: userKey,
-    newAccountPubkey: newTokenMint,
+    newAccountPubkey: childMint,
     space: MINT_SIZE,
     lamports: await getMinimumBalanceForRentExemptMint(provider.connection),
     programId: TOKEN_PROGRAM_ID,
   });
-  const createInitializeMintIx = createInitializeMintInstruction(newTokenMint, 0, userKey, null, TOKEN_PROGRAM_ID);
+  const createInitializeMintIx = createInitializeMintInstruction(childMint, 0, userKey, null, TOKEN_PROGRAM_ID);
 
   const ComputeIx = await nftBreedingProgram.methods.compute(bump)
   .accounts({
     payer: userKey,
-    newToken: newTokenMint,
+    newToken: childMint,
     childBreedingMeta,
     parentATokenAccount,
     parentABreedingMeta: parentABreedingMetadata,

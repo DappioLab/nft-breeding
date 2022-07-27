@@ -34,11 +34,12 @@ export async function computeTxn(
   userKey: PublicKey, 
   parentAMint: PublicKey, 
   parentBMint: PublicKey,
+  childMint: PublicKey,
   provider: anchor.AnchorProvider
   ){
     const tx = new Transaction();
 
-    const computeIx = await ixns.computeIx(userKey, parentAMint, parentBMint, provider);
+    const computeIx = await ixns.computeIx(userKey, parentAMint, parentBMint, childMint, provider);
 
     computeIx.forEach((ix)=>{
         tx.add(ix);

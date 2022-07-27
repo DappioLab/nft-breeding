@@ -1,5 +1,5 @@
 import * as anchor from "@project-serum/anchor";
-import { PublicKey, Connection } from "@solana/web3.js";
+import { PublicKey, Connection, Keypair } from "@solana/web3.js";
 import NodeWallet from "@project-serum/anchor/dist/cjs/nodewallet";
 import { IDL as nftBreedingIDL  } from "../target/types/nft_breeding";
 import { getAccount } from "@solana/spl-token";
@@ -39,21 +39,23 @@ describe("NFT Breeding", () => {
     provider
   );
 
-  // SolMeet DAO#0
+  // SolMeet DAO#2
   const parentAMint = new PublicKey(
-    "Evo6Dhsrqn8GrrU5AaawAJgiFtKCcjLPw9QKRapsHhmK"
+    "5UeK5Fp26AfMsFiCnyVtCE6fdxVTwFcUnkXiaD3RkaXM"
   );
-  const parentAUri = "https://arweave.net/QpiIsbFE4OWAsuF75J6AukNlUbYg2lxE7teCxi-TzcQ";
+  const parentAUri = "https://arweave.net/dHHQ9XVgVg2livoX3De5WCiYH8an1CgCjmxAHShST4I";
   const parentAUriPath = "./uri/parentAUri.json"
   let parentAAttributes: string[] = [];
 
-  // SolMeet DAO#1
+  // SolMeet DAO#3
   const parentBMint = new PublicKey(
-    "D1kqUW2N67BiDsgXMA6gZeQ4CNFciZKmcxJV3ThnCtLd"
+    "6qMCTTfjR9W8tkrLCXYNjUMxid8kD3SM7ZHXMGJ78Afa"
   );
-  const parentBUri = "https://arweave.net/YmrEAavNz-fTszq12kn7J-BA4pTgA9IHCsiaSH9feCg";
+  const parentBUri = "https://arweave.net/C_KjdIPznqFdX1H4oEf_oV_lMr48S9jUmdjInubPTlI";
   const parentBUriPath = "./uri/parentBUri.json"
   let parentBAttributes: string[] = [];
+
+  const childMint = Keypair.generate();
   
   it("Read token metadata",async () => {
     parentAAttributes = nftBreedingSDK.readAttrsFromUri(parentAUriPath);
@@ -63,26 +65,66 @@ describe("NFT Breeding", () => {
   });
 
   it("Initialize", async()=>{
-    const initializeTxn = await nftBreedingSDK.initializeTxn(wallet.publicKey, parentAMint, parentAAttributes, provider);
+    // initialize parent A
+    const initializeATxn = await nftBreedingSDK.initializeTxn(wallet.publicKey, parentAMint, parentAAttributes, provider);
     
-    // initializeTxn.feePayer = wallet.publicKey;
-    // initializeTxn.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
-    // console.log(initializeTxn.serializeMessage().toString("base64"));
+    // initializeATxn.feePayer = wallet.publicKey;
+    // initializeATxn.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
+    // console.log(initializeATxn.serializeMessage().toString("base64"));
 
-    // const result = await provider.sendAndConfirm(initializeTxn);
-    // console.log("initialize txn:", result);
+    const resultA = await provider.sendAndConfirm(initializeATxn);
+    console.log("initialize parent A txn:", resultA);
 
-    const allBreedingAccount = await nftBreedingSDK.fetchBreedingMetaByMint(parentAMint, provider);
-    console.log("attributes:\n");
+    // initialize parent B
+    const initializeBTxn = await nftBreedingSDK.initializeTxn(wallet.publicKey, parentBMint, parentBAttributes, provider);
     
+    // initializeBTxn.feePayer = wallet.publicKey;
+    // initializeBTxn.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
+    // console.log(initializeBTxn.serializeMessage().toString("base64"));
+
+    const resultB = await provider.sendAndConfirm(initializeBTxn);
+    console.log("initialize parent B txn:", resultB);
+
+
+    console.log("\n===============\n")
+
+    console.log("Parent A:")
+    const parentABreedingMeta = await nftBreedingSDK.fetchBreedingMetaByMint(parentAMint, provider);
+    console.log(parentABreedingMeta)
+    console.log("attributes:");
     // @ts-ignore
-    allBreedingAccount?.account.attributes.forEach((trait)=>{
+    parentABreedingMeta?.account.attributes.forEach((trait)=>{
+      console.log(Buffer.from(trait).toString("utf-8"))
+    })
+
+    console.log("\nParent B:")
+    const parentBBreedingMeta = await nftBreedingSDK.fetchBreedingMetaByMint(parentBMint, provider);
+    console.log(parentBBreedingMeta)
+    console.log("attributes:");
+    // @ts-ignore
+    parentBBreedingMeta?.account.attributes.forEach((trait)=>{
       console.log(Buffer.from(trait).toString("utf-8"))
     })
   });
 
   it("Compute", async()=>{
-    
+    const conputeTxn = await nftBreedingSDK.computeTxn(wallet.publicKey, parentAMint, parentBMint, childMint.publicKey, provider);
+
+    conputeTxn.feePayer = wallet.publicKey;
+    conputeTxn.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
+    console.log(conputeTxn.serializeMessage().toString("base64"));
+
+    const result = await provider.sendAndConfirm(conputeTxn, [wallet.payer, childMint]);
+    console.log("compute txn:", result);
+
+    console.log("\nChild:")
+    const childBreedingMeta = await nftBreedingSDK.fetchBreedingMetaByParent(parentAMint ,parentBMint, provider);
+    console.log(childBreedingMeta)
+    console.log("attributes:");
+    // @ts-ignore
+    childBreedingMeta?.account.attributes.forEach((trait)=>{
+      console.log(Buffer.from(trait).toString("utf-8"))
+    });
   });
 
   it("Mint Child", async()=>{
