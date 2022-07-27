@@ -1,6 +1,7 @@
 import * as anchor from "@project-serum/anchor";
 import { PublicKey, Connection } from "@solana/web3.js";
 import NodeWallet from "@project-serum/anchor/dist/cjs/nodewallet";
+import { IDL as nftBreedingIDL  } from "../target/types/nft_breeding";
 import { getAccount } from "@solana/spl-token";
 import { assert } from "chai";
 import * as nftBreedingSDK from "../ts"
@@ -32,6 +33,11 @@ describe("NFT Breeding", () => {
   const provider = new anchor.AnchorProvider(connection, wallet, options);
 
   anchor.setProvider(provider);
+  const nftBreedingProgram = new anchor.Program(
+    nftBreedingIDL,
+    nftBreedingSDK.NFT_BREEDING_PROGRAM_ID,
+    provider
+  );
 
   // SolMeet DAO#0
   const parentAMint = new PublicKey(
@@ -57,8 +63,22 @@ describe("NFT Breeding", () => {
   });
 
   it("Initialize", async()=>{
-    // const initializeTxn = await nftBreedingSDK.initializeTxn(wallet.publicKey, parentAMint, parentAAttributes, provider);
-    // console.log(initializeTxn)
+    const initializeTxn = await nftBreedingSDK.initializeTxn(wallet.publicKey, parentAMint, parentAAttributes, provider);
+    
+    // initializeTxn.feePayer = wallet.publicKey;
+    // initializeTxn.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
+    // console.log(initializeTxn.serializeMessage().toString("base64"));
+
+    // const result = await provider.sendAndConfirm(initializeTxn);
+    // console.log("initialize txn:", result);
+
+    const allBreedingAccount = await nftBreedingSDK.fetchBreedingMetaByMint(parentAMint, provider);
+    console.log("attributes:\n");
+    
+    // @ts-ignore
+    allBreedingAccount?.account.attributes.forEach((trait)=>{
+      console.log(Buffer.from(trait).toString("utf-8"))
+    })
   });
 
   it("Compute", async()=>{

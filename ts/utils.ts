@@ -72,8 +72,8 @@ import {
     return await PublicKey.findProgramAddress(
           [
             Buffer.from(BREEDING_SEED),
-            nftMint.toBuffer(),
             userKey.toBuffer(),
+            nftMint.toBuffer(),
           ],
           NFT_BREEDING_PROGRAM_ID
         )
