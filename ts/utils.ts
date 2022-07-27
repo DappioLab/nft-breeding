@@ -14,12 +14,14 @@ import {
   } from "@solana/spl-token";
   import * as fs from "fs";
   import { AnchorProvider } from "@project-serum/anchor";
-  import { NFT_BREEDING_PROGRAM_ID } from "./ids";
+  import { NFT_BREEDING_PROGRAM_ID, TOKEN_METADATA_PROGRAM_ID } from "./ids";
   const ATA_INIT_PROGRAM_ID = new PublicKey(
     "9tiP8yZcekzfGzSBmp7n9LaDHRjxP2w7wJj8tpPJtfG"
   );
 
   const BREEDING_SEED = "breeding";
+  const PREFIX = "metadata";
+  const EDITION = "edition";
   
   export async function findAssociatedTokenAddress(
     walletAddress: PublicKey,
@@ -66,9 +68,8 @@ import {
   export async function findBreedingMeta(
     userKey: PublicKey,
     nftMint: PublicKey
-  ): Promise<PublicKey> {
-    return (
-        await PublicKey.findProgramAddress(
+  ){
+    return await PublicKey.findProgramAddress(
           [
             Buffer.from(BREEDING_SEED),
             nftMint.toBuffer(),
@@ -76,6 +77,38 @@ import {
           ],
           NFT_BREEDING_PROGRAM_ID
         )
-      )[0];
+      ;
   }
   
+  export async function findTokenMetadataAddress(
+    nftMint: PublicKey
+  ){
+    const seeds = [
+        Buffer.from(PREFIX),
+        TOKEN_METADATA_PROGRAM_ID.toBuffer(), 
+        nftMint.toBuffer()
+    ];
+    
+    return await PublicKey.findProgramAddress(
+        seeds,
+        TOKEN_METADATA_PROGRAM_ID
+      )
+    ;
+  }
+
+  export async function findMasterEditionAddress(
+    nftMint: PublicKey
+  ){
+    const seeds = [
+        Buffer.from(PREFIX),
+        TOKEN_METADATA_PROGRAM_ID.toBuffer(), 
+        nftMint.toBuffer(),
+        Buffer.from(EDITION)
+    ];
+    
+    return await PublicKey.findProgramAddress(
+        seeds,
+        TOKEN_METADATA_PROGRAM_ID
+      )
+    ;
+  }

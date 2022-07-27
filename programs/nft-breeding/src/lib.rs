@@ -9,7 +9,7 @@ use anchor_spl::token::{
 
 use anchor_lang::solana_program::program::invoke;
 use mpl_token_metadata::state::Creator;
-declare_id!("B91y1sRzsHMCgDkaxeHyembZ63Gpd13DbNi6iX2HCseh");
+declare_id!("9U1zSoU2vK8UBDeT8a3YEaF9Nvb7uE1mF4hKYy4NTnTB");
 
 #[program]
 pub mod nft_breeding {
@@ -60,7 +60,7 @@ pub mod nft_breeding {
                 .data
                 .borrow(),
         );
-        random_seed.extend_from_slice(&ctx.accounts.slot_history.to_account_info().data.borrow());
+        random_seed.extend_from_slice(&ctx.accounts.slot_hashes_account.to_account_info().data.borrow());
         let random = hash(&random_seed).to_bytes().to_vec();
         let mut new_attributes: Vec<Vec<u8>> = vec![];
 
@@ -132,7 +132,7 @@ pub mod nft_breeding {
         Ok(())
     }
 
-    pub fn mint(ctx: Context<Mint_child>) -> Result<()> {
+    pub fn mint(ctx: Context<MintChild>) -> Result<()> {
         let creators = Creator {
             share: 100,
             address: ctx.accounts.child_breeding_meta.key(),
@@ -182,7 +182,7 @@ pub mod nft_breeding {
         ctx.accounts.child_breeding_meta.breeding = false;
         Ok(())
     }
-    pub fn update_uri(ctx: Context<Update_uri>, uri: String) -> Result<()> {
+    pub fn update_uri(ctx: Context<UpdateUri>, uri: String) -> Result<()> {
         let creators = Creator {
             share: 100,
             address: ctx.accounts.breeding_meta.key(),
@@ -274,19 +274,22 @@ pub struct Compute<'info> {
     )]
     pub parent_b_breeding_meta: Account<'info, BreedingMeta>,
     pub system_program: Program<'info, System>,
+    /// CHECK: safe
     #[account(
-        constraint = slot_history.key() == slot_hashes::id()
+        constraint = slot_hashes_account.key() == slot_hashes::id()
     )]
-    pub slot_history: AccountInfo<'info>,
+    pub slot_hashes_account: AccountInfo<'info>,
 }
 #[derive(Accounts)]
-pub struct Mint_child<'info> {
+pub struct MintChild<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
     #[account(mut)]
     pub new_token: Box<Account<'info, Mint>>,
+    /// CHECK: safe
     #[account(mut)]
     pub new_token_metadata: AccountInfo<'info>,
+    /// CHECK: safe
     #[account(mut)]
     pub new_token_master_edition: AccountInfo<'info>,
     #[account(mut)]
@@ -299,9 +302,10 @@ pub struct Mint_child<'info> {
     pub parent_b_token_account: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
     pub parent_b_token_mint: Box<Account<'info, Mint>>,
+    /// CHECK: safe
     pub token_program: AccountInfo<'info>,
 }
-impl<'info> Mint_child<'info> {
+impl<'info> MintChild<'info> {
     fn burn_parent_a_token_from_owner(&self) -> CpiContext<'_, '_, '_, 'info, Burn<'info>> {
         let cpi_accounts = Burn {
             mint: self.parent_a_token_mint.to_account_info().clone(),
@@ -320,7 +324,7 @@ impl<'info> Mint_child<'info> {
     }
 }
 #[derive(Accounts)]
-pub struct Update_uri<'info> {
+pub struct UpdateUri<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
     #[account(mut,
@@ -333,6 +337,7 @@ pub struct Update_uri<'info> {
     )]
     pub nft_account: Account<'info, TokenAccount>,
     pub nft_mint: Account<'info, Mint>,
+    /// CHECK: safe
     pub nft_metadata: AccountInfo<'info>,
 }
 #[account]

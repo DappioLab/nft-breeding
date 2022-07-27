@@ -15,14 +15,11 @@ import { IDL as nftBreedingIDL  } from "../target/types/nft_breeding";
 import {
   NFT_BREEDING_PROGRAM_ID,
 } from "./ids";
-import { findAssociatedTokenAddress, findBreedingMeta } from "./utils";
+import { createATAWithoutCheckIx, findAssociatedTokenAddress, findBreedingMeta, findMasterEditionAddress, findTokenMetadataAddress } from "./utils";
 
-const BREEDING_SEED = "breeding";
-
-export async function initialize(
+export async function initializeIx(
   userKey: PublicKey,
   nftMint: PublicKey,
-  nftMetadata: PublicKey,
   attributes: string[], 
   provider: anchor.AnchorProvider
   ){
@@ -32,14 +29,10 @@ export async function initialize(
     provider
   );
 
-  const _attributes: Buffer[] = [];
-  for(let attr of attributes){
-    _attributes.push(Buffer.from(attr));
-  }
+  const nftMetadata = (await findTokenMetadataAddress(nftMint))[0];
+  const [breedingMeta, bump] = await findBreedingMeta(userKey, nftMint);
 
-  const breedingMeta = await findBreedingMeta(userKey, nftMint);
-
-  const ix = await nftBreedingProgram.methods.initialize(new anchor.BN(bump), _attributes)
+  const ix = await nftBreedingProgram.methods.initialize(bump, attributes)
   .accounts({
     authority: userKey,
     tokenMint: nftMint,
@@ -52,7 +45,7 @@ export async function initialize(
   return ix;
 }
 
-export async function compute(
+export async function computeIx(
   userKey: PublicKey, 
   parentAMint: PublicKey, 
   parentBMint: PublicKey,
@@ -63,14 +56,17 @@ export async function compute(
     NFT_BREEDING_PROGRAM_ID,
     provider
   );
+
+  const allIx: anchor.web3.TransactionInstruction[] = [];
+
   const parentATokenAccount = await findAssociatedTokenAddress(userKey, parentAMint);
   const parentBTokenAccount = await findAssociatedTokenAddress(userKey, parentBMint);
 
-  const parentABreedingMetadata = await findBreedingMeta(userKey, parentAMint);
-  const parentBBreedingMetadata = await findBreedingMeta(userKey, parentBMint);
+  const parentABreedingMetadata = (await findBreedingMeta(userKey, parentAMint))[0];
+  const parentBBreedingMetadata = (await findBreedingMeta(userKey, parentBMint))[0];
 
   const newTokenMint = Keypair.generate().publicKey;
-  const childBreedingMeta = await findBreedingMeta(userKey, newTokenMint);
+  const [childBreedingMeta, bump] = await findBreedingMeta(userKey, newTokenMint);
   const createAccountIx = SystemProgram.createAccount({
     fromPubkey: userKey,
     newAccountPubkey: newTokenMint,
@@ -80,7 +76,7 @@ export async function compute(
   });
   const createInitializeMintIx = createInitializeMintInstruction(newTokenMint, 0, userKey, null, TOKEN_PROGRAM_ID);
 
-  const ComputeIx = await nftBreedingProgram.methods.compute()
+  const ComputeIx = await nftBreedingProgram.methods.compute(bump)
   .accounts({
     payer: userKey,
     newToken: newTokenMint,
@@ -88,38 +84,93 @@ export async function compute(
     parentATokenAccount,
     parentABreedingMeta: parentABreedingMetadata,
     parentBTokenAccount,
-    parentBBreedingMeta: parentABreedingMetadata,
+    parentBBreedingMeta: parentBBreedingMetadata,
     systemProgram: anchor.web3.SystemProgram.programId,
-    slotHistory:
+    slotHashesAccount: anchor.web3.SYSVAR_SLOT_HASHES_PUBKEY
   })
   .instruction();
 
-  return ix;
+  allIx.push(createAccountIx);
+  allIx.push(createInitializeMintIx);
+  allIx.push(ComputeIx);
+
+  return allIx;
 }
 
-export async function mint(provider: anchor.AnchorProvider){
+export async function mintChildIx(
+  userKey: PublicKey,
+  childNftMint: PublicKey,
+  parentAMint: PublicKey,
+  parentBMint: PublicKey,
+  provider: anchor.AnchorProvider
+  ){
+  const nftBreedingProgram = new anchor.Program(
+    nftBreedingIDL,
+    NFT_BREEDING_PROGRAM_ID,
+    provider
+  );
+  const allIx: anchor.web3.TransactionInstruction[] = [];
+
+  const parentATokenAccount = await findAssociatedTokenAddress(userKey, parentAMint);
+  const parentBTokenAccount = await findAssociatedTokenAddress(userKey, parentBMint);
+  const childNftTokenAccount = await findAssociatedTokenAddress(userKey, childNftMint);
+  
+  const childNftBreedingMetadata = (await findBreedingMeta(userKey, childNftMint))[0];
+  const childTokenMetadataAddress = (await findTokenMetadataAddress(childNftMint))[0];
+  const childMasterEditionAddress = (await findMasterEditionAddress(childNftMint))[0];
+
+
+  const createAtaIx = await createATAWithoutCheckIx(userKey, childNftMint);
+  const mintToIx = createMintToInstruction(childNftMint, childNftTokenAccount, userKey, 1);
+
+  const mintChildIx = await nftBreedingProgram.methods.mint()
+  .accounts({
+    payer: userKey, 
+    newToken: childNftMint, 
+    newTokenMetadata: childTokenMetadataAddress,
+    newTokenMasterEdition: childMasterEditionAddress, 
+    childBreedingMeta: childNftBreedingMetadata,
+    parentATokenAccount, 
+    parentATokenMint: parentAMint, 
+    parentBTokenAccount, 
+    parentBTokenMint: parentBMint, 
+    tokenProgram: TOKEN_PROGRAM_ID
+  })
+  .instruction();
+
+  allIx.push(createAtaIx);
+  allIx.push(mintToIx);
+  allIx.push(mintChildIx);
+
+
+  return allIx;
+}
+
+export async function updateUriIx(
+  userKey: PublicKey, 
+  nftMint: PublicKey, 
+  updateUri: string,
+  provider: anchor.AnchorProvider
+  ){
   const nftBreedingProgram = new anchor.Program(
     nftBreedingIDL,
     NFT_BREEDING_PROGRAM_ID,
     provider
   );
 
-  const ix = await nftBreedingProgram.methods.mint()
-  .accounts({})
-  .instruction()
+  const nftBreedingMetadata = (await findBreedingMeta(userKey, nftMint))[0];
+  const nftTokenAccount = await findAssociatedTokenAddress(userKey, nftMint);
 
-  return ix;
-}
+  const nftMetadata = (await findTokenMetadataAddress(nftMint))[0];
 
-export async function updateUri(provider: anchor.AnchorProvider){
-  const nftBreedingProgram = new anchor.Program(
-    nftBreedingIDL,
-    NFT_BREEDING_PROGRAM_ID,
-    provider
-  );
-
-  const ix = await nftBreedingProgram.methods.updateUri()
-  .accounts({})
+  const ix = await nftBreedingProgram.methods.updateUri(updateUri)
+  .accounts({
+    owner: userKey, 
+    breedingMeta: nftBreedingMetadata,
+    nftAccount: nftTokenAccount,
+    nftMint, 
+    nftMetadata: nftMetadata
+  })
   .instruction()
 
   return ix;
