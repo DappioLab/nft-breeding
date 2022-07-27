@@ -12,7 +12,7 @@ import { hex } from "@project-serum/anchor/dist/cjs/utils/bytes";
 import { hash } from "@project-serum/anchor/dist/cjs/utils/sha256";
 import { IDL as nftBreedingIDL  } from "../target/types/nft_breeding";
 import {
-  NFT_BREEDING_PROGRAM_ID,
+  NFT_BREEDING_PROGRAM_ID, TOKEN_METADATA_PROGRAM_ID,
 } from "./ids";
 import { createATAWithoutCheckIx, findAssociatedTokenAddress, findBreedingMeta, findMasterEditionAddress, findTokenMetadataAddress } from "./utils";
 
@@ -135,7 +135,10 @@ export async function mintChildIx(
     parentATokenMint: parentAMint, 
     parentBTokenAccount, 
     parentBTokenMint: parentBMint, 
-    tokenProgram: TOKEN_PROGRAM_ID
+    rent: anchor.web3.SYSVAR_RENT_PUBKEY,
+    tokenProgram: TOKEN_PROGRAM_ID,
+    metadataProgram: TOKEN_METADATA_PROGRAM_ID,
+    SystemProgram: anchor.web3.SystemProgram.programId
   })
   .instruction();
 

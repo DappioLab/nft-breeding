@@ -145,9 +145,9 @@ pub mod nft_breeding {
             ctx.accounts.payer.key(),
             ctx.accounts.payer.key(),
             ctx.accounts.child_breeding_meta.key(),
-            "".to_string(),
+            "SolMeet".to_string(),
             String::from_utf8(ctx.accounts.child_breeding_meta.hash.to_vec()).unwrap(),
-            "".to_string(),
+            "SolMeet".to_string(),
             Some(vec![creators]),
             0,
             false,
@@ -303,8 +303,12 @@ pub struct MintChild<'info> {
     pub parent_b_token_account: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
     pub parent_b_token_mint: Box<Account<'info, Mint>>,
+    pub rent: Sysvar<'info, Rent>,
     /// CHECK: safe
     pub token_program: AccountInfo<'info>,
+    /// CHECK: safe
+    pub metadata_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
 }
 impl<'info> MintChild<'info> {
     fn burn_parent_a_token_from_owner(&self) -> CpiContext<'_, '_, '_, 'info, Burn<'info>> {
