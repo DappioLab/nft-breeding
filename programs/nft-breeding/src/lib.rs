@@ -38,7 +38,7 @@ pub mod nft_breeding {
         ctx.accounts.breeding_meta.parent_a = system_program::id();
         ctx.accounts.breeding_meta.parent_b = system_program::id();
         ctx.accounts.breeding_meta.attributes = attributes.clone();
-        ctx.accounts.breeding_meta.breeding = true;
+        ctx.accounts.breeding_meta.breeding = false;
         ctx.accounts.breeding_meta.bump = bump;
         Ok(())
     }
@@ -127,7 +127,7 @@ pub mod nft_breeding {
         ctx.accounts.child_breeding_meta.parent_b =
             ctx.accounts.parent_b_breeding_meta.mint.clone();
         ctx.accounts.child_breeding_meta.attributes = new_attributes.clone();
-        ctx.accounts.child_breeding_meta.breeding = false;
+        ctx.accounts.child_breeding_meta.breeding = true;
         ctx.accounts.child_breeding_meta.bump = bump;
         Ok(())
     }
@@ -182,6 +182,7 @@ pub mod nft_breeding {
         ctx.accounts.child_breeding_meta.breeding = false;
         Ok(())
     }
+
     pub fn update_uri(ctx: Context<UpdateUri>, uri: String) -> Result<()> {
         let creators = Creator {
             share: 100,
