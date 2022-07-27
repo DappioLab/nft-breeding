@@ -139,20 +139,20 @@ describe("NFT Breeding", () => {
     mintChildTxn.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
     console.log(mintChildTxn.serializeMessage().toString("base64"));
 
-    const result = await provider.sendAndConfirm(mintChildTxn, [wallet.payer]);
-    console.log("compute txn:", result);
+    // const result = await provider.sendAndConfirm(mintChildTxn, [wallet.payer]);
+    // console.log("mint child txn:", result);
   });
 
-  // it("Update URI", async()=>{
-  //   const childBreedingMeta = await nftBreedingSDK.fetchBreedingMetaByParent(parentAMint ,parentBMint, provider);
-  //   const _childMint = childBreedingMeta.account.mint;
+  it("Update URI", async()=>{
+    // const childBreedingMeta = await nftBreedingSDK.fetchBreedingMetaByParent(parentAMint ,parentBMint, provider);
+    // const _childMint = childBreedingMeta.account.mint;
 
-  //   const updateUri = await nftBreedingSDK.updateUriTxn(wallet.publicKey, _childMint, childUri, provider);
-  //   updateUri.feePayer = wallet.publicKey;
-  //   updateUri.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
-  //   console.log(updateUri.serializeMessage().toString("base64"));
+    // const updateUri = await nftBreedingSDK.updateUriTxn(wallet.publicKey, _childMint, childUri, provider);
+    // updateUri.feePayer = wallet.publicKey;
+    // updateUri.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
+    // console.log(updateUri.serializeMessage().toString("base64"));
 
-  //   const result = await provider.sendAndConfirm(updateUri, [wallet.payer]);
-  //   console.log("compute txn:", result);
-  // });
+    // const result = await provider.sendAndConfirm(updateUri, [wallet.payer]);
+    // console.log("update uri txn:", result);
+  });
 });
