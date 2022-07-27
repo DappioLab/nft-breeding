@@ -29,7 +29,7 @@ pub mod nft_breeding {
             hash_data.append(&mut attribute);
         }
 
-        let hash_value = hash(&hash_data);
+        let hash_value = hash_to_fix_len(&hash_data);
 
         ctx.accounts.breeding_meta.hash = hash_value;
         ctx.accounts.breeding_meta.generation = 0;
@@ -106,7 +106,7 @@ pub mod nft_breeding {
         for mut attribute in new_attributes.clone() {
             hash_data.append(&mut attribute);
         }
-        let hash_value = hash(&hash_data);
+        let hash_value = hash_to_fix_len(&hash_data);
         let generation = ctx
             .accounts
             .parent_a_breeding_meta
@@ -146,7 +146,7 @@ pub mod nft_breeding {
             ctx.accounts.payer.key(),
             ctx.accounts.child_breeding_meta.key(),
             "".to_string(),
-            ctx.accounts.child_breeding_meta.hash.to_string(),
+            String::from_utf8(ctx.accounts.child_breeding_meta.hash.to_vec()).unwrap(),
             "".to_string(),
             Some(vec![creators]),
             0,
@@ -195,7 +195,7 @@ pub mod nft_breeding {
             None,
             Some(DataV2 {
                 name: "".to_string(),
-                symbol: ctx.accounts.breeding_meta.hash.to_string(),
+                symbol: String::from_utf8(ctx.accounts.breeding_meta.hash.to_vec()).unwrap(),
                 uri: uri,
                 seller_fee_basis_points: 0,
                 collection: None,
@@ -342,7 +342,7 @@ pub struct UpdateUri<'info> {
 }
 #[account]
 pub struct BreedingMeta {
-    pub hash: Hash,
+    pub hash: [u8; 32],
     pub generation: u8,
     pub mint: Pubkey,
     pub authority: Pubkey,
@@ -351,4 +351,14 @@ pub struct BreedingMeta {
     pub attributes: Vec<Vec<u8>>,
     pub breeding: bool,
     pub bump: u8,
+}
+
+pub fn hash_to_fix_len(
+    hash_data: &Vec<u8>
+)->[u8;32] {
+    let encoded = hex::encode(hash(hash_data));
+    let src = encoded.as_bytes();
+    let mut hash_value = [0u8; 32];
+    hash_value[..src.len()].copy_from_slice(src);
+    hash_value
 }
