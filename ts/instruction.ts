@@ -19,6 +19,8 @@ import { createATAWithoutCheckIx, findAssociatedTokenAddress, findBreedingMeta, 
 export async function initializeIx(
   userKey: PublicKey,
   nftMint: PublicKey,
+  name: string,
+  symbol: string,
   attributes: string[], 
   provider: anchor.AnchorProvider
   ){
@@ -33,7 +35,7 @@ export async function initializeIx(
   const nftMetadata = (await findTokenMetadataAddress(nftMint))[0];
   const [breedingMeta, bump] = await findBreedingMeta(userKey, nftMint);
 
-  const ix = await nftBreedingProgram.methods.initialize(bump, _attributes)
+  const ix = await nftBreedingProgram.methods.initialize(bump,Buffer.from(name),Buffer.from(symbol), _attributes)
   .accounts({
     authority: userKey,
     tokenMint: nftMint,

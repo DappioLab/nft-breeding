@@ -18,12 +18,14 @@ import * as ixns from "./instruction";
 export async function initializeTxn(
   userKey: PublicKey,
   nftMint: PublicKey,
+  name: string,
+  symbol: string,
   attributes: string[], 
   provider: anchor.AnchorProvider
   ){
     const tx = new Transaction();
 
-    const initializeIx = await ixns.initializeIx(userKey, nftMint, attributes, provider);
+    const initializeIx = await ixns.initializeIx(userKey, nftMint,name,symbol, attributes, provider);
 
     tx.add(initializeIx);
 

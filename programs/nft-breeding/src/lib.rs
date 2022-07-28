@@ -19,12 +19,20 @@ pub mod nft_breeding {
 
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>, bump: u8, attributes: Vec<Vec<u8>>) -> Result<()> {
+    pub fn initialize(
+        ctx: Context<Initialize>,
+        bump: u8,
+        name: Vec<u8>,
+        symbol: Vec<u8>,
+        attributes: Vec<Vec<u8>>,
+    ) -> Result<()> {
         //generate hash
         let mut hash_data: Vec<u8> = ctx.accounts.authority.key().to_bytes().clone().to_vec();
         hash_data.append(&mut ctx.accounts.token_mint.key().to_bytes().clone().to_vec());
         hash_data.append(&mut system_program::id().to_bytes().clone().to_vec());
         hash_data.append(&mut system_program::id().to_bytes().clone().to_vec());
+        hash_data.append(&mut name.clone());
+        hash_data.append(&mut symbol.clone());
         for mut attribute in attributes.clone() {
             hash_data.append(&mut attribute);
         }
@@ -37,12 +45,14 @@ pub mod nft_breeding {
         ctx.accounts.breeding_meta.mint = ctx.accounts.token_mint.key().clone();
         ctx.accounts.breeding_meta.parent_a = system_program::id();
         ctx.accounts.breeding_meta.parent_b = system_program::id();
+        ctx.accounts.breeding_meta.name = name.clone();
+        ctx.accounts.breeding_meta.symbol = symbol.clone();
         ctx.accounts.breeding_meta.attributes = attributes.clone();
         ctx.accounts.breeding_meta.breeding = false;
         ctx.accounts.breeding_meta.bump = bump;
         Ok(())
     }
-    
+
     pub fn compute(ctx: Context<Compute>, bump: u8) -> Result<()> {
         //decide new attributes
         let mut random_seed: Vec<u8> = vec![0];
@@ -60,7 +70,13 @@ pub mod nft_breeding {
                 .data
                 .borrow(),
         );
-        random_seed.extend_from_slice(&ctx.accounts.slot_hashes_account.to_account_info().data.borrow());
+        random_seed.extend_from_slice(
+            &ctx.accounts
+                .slot_hashes_account
+                .to_account_info()
+                .data
+                .borrow(),
+        );
         let random = hash(&random_seed).to_bytes().to_vec();
         let mut new_attributes: Vec<Vec<u8>> = vec![];
 
@@ -103,6 +119,8 @@ pub mod nft_breeding {
                 .clone()
                 .to_vec(),
         );
+        hash_data.append(&mut ctx.accounts.parent_a_breeding_meta.name.clone());
+        hash_data.append(&mut ctx.accounts.parent_a_breeding_meta.symbol.clone());
         for mut attribute in new_attributes.clone() {
             hash_data.append(&mut attribute);
         }
@@ -145,8 +163,8 @@ pub mod nft_breeding {
             ctx.accounts.payer.key(),
             ctx.accounts.payer.key(),
             ctx.accounts.child_breeding_meta.key(),
-            String::from_utf8(ctx.accounts.child_breeding_meta.hash.to_vec()).unwrap(),
-            "".to_string(),
+            String::from_utf8(ctx.accounts.child_breeding_meta.name.clone()).unwrap(),
+            String::from_utf8(ctx.accounts.child_breeding_meta.symbol.clone()).unwrap(),
             "".to_string(),
             Some(vec![creators]),
             0,
@@ -193,7 +211,7 @@ pub mod nft_breeding {
             None,
             Some(DataV2 {
                 name: String::from_utf8(ctx.accounts.breeding_meta.hash.to_vec()).unwrap(),
-                symbol: "".to_string(), 
+                symbol: "".to_string(),
                 uri: uri,
                 seller_fee_basis_points: 0,
                 collection: None,
@@ -258,7 +276,9 @@ pub struct Compute<'info> {
     pub parent_a_token_account: Box<Account<'info, TokenAccount>>,
     #[account(mut,
         constraint = parent_a_breeding_meta.authority == parent_b_breeding_meta.authority,
-        constraint = parent_a_breeding_meta.breeding == false
+        constraint = parent_a_breeding_meta.breeding == false,
+        constraint = parent_a_breeding_meta.name == parent_b_breeding_meta.name,
+        constraint = parent_a_breeding_meta.symbol == parent_b_breeding_meta.symbol
     )]
     pub parent_a_breeding_meta: Account<'info, BreedingMeta>,
     #[account(
@@ -353,14 +373,14 @@ pub struct BreedingMeta {
     pub authority: Pubkey,
     pub parent_a: Pubkey,
     pub parent_b: Pubkey,
+    pub name: Vec<u8>,
+    pub symbol: Vec<u8>,
     pub attributes: Vec<Vec<u8>>,
     pub breeding: bool,
     pub bump: u8,
 }
 
-pub fn hash_to_fix_len(
-    hash_data: &Vec<u8>
-)->[u8;32] {
+pub fn hash_to_fix_len(hash_data: &Vec<u8>) -> [u8; 32] {
     let encoded = hex::encode(hash(hash_data));
     let src = encoded.as_bytes();
     let mut hash_value = [0u8; 32];
