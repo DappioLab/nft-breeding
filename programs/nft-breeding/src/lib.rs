@@ -342,7 +342,6 @@ pub struct UpdateUri<'info> {
     /// CHECK: safe
     #[account(mut)]
     pub nft_metadata: AccountInfo<'info>,
-
     /// CHECK: safe
     pub metadata_program: AccountInfo<'info>,
 }
