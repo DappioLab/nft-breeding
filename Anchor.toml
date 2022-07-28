@@ -13,3 +13,7 @@ wallet = "~/.config/solana/phantom.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+initialize = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 migration/initialize.ts"
+compute = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 migration/compute.ts"
+mintChild = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 migration/mintChild.ts"
+updateUri = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 migration/updateUri.ts"
