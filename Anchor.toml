@@ -1,7 +1,7 @@
 [features]
 seeds = false
 [programs.localnet]
-nft_breeding = "9U1zSoU2vK8UBDeT8a3YEaF9Nvb7uE1mF4hKYy4NTnTB"
+nft_breeding = "NFTBfAcFhBb8yqNvYiN8RPQfr5KrVuHGK7pj61EiVnZ"
 
 [registry]
 url = "https://anchor.projectserum.com"

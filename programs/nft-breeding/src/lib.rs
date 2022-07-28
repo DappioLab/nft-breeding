@@ -9,7 +9,7 @@ use anchor_spl::token::{
 
 use anchor_lang::solana_program::program::invoke;
 use mpl_token_metadata::state::Creator;
-declare_id!("9U1zSoU2vK8UBDeT8a3YEaF9Nvb7uE1mF4hKYy4NTnTB");
+declare_id!("NFTBfAcFhBb8yqNvYiN8RPQfr5KrVuHGK7pj61EiVnZ");
 
 #[program]
 pub mod nft_breeding {
