@@ -18,6 +18,9 @@ export const parentBUriPath = "./uri/parentBUri.json"
 export const childMint = Keypair.generate();
 export const childUri = "solmeet";
 
+export const collectionName = "SolMeet DAO";
+export const collectionSymbol = "SMD";
+
 // Configure connection
 export const commitment: Commitment = "processed";
 
