@@ -173,7 +173,8 @@ export async function updateUriIx(
     breedingMeta: nftBreedingMetadata,
     nftAccount: nftTokenAccount,
     nftMint, 
-    nftMetadata: nftMetadata
+    nftMetadata: nftMetadata,
+    metadataProgram: TOKEN_METADATA_PROGRAM_ID,
   })
   .instruction()
 
