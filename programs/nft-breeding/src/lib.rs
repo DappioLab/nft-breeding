@@ -9,7 +9,7 @@ use anchor_spl::token::{
 
 use anchor_lang::solana_program::program::invoke;
 use mpl_token_metadata::state::Creator;
-declare_id!("B91y1sRzsHMCgDkaxeHyembZ63Gpd13DbNi6iX2HCseh");
+declare_id!("9U1zSoU2vK8UBDeT8a3YEaF9Nvb7uE1mF4hKYy4NTnTB");
 
 #[program]
 pub mod nft_breeding {
@@ -29,7 +29,7 @@ pub mod nft_breeding {
             hash_data.append(&mut attribute);
         }
 
-        let hash_value = hash(&hash_data);
+        let hash_value = hash_to_fix_len(&hash_data);
 
         ctx.accounts.breeding_meta.hash = hash_value;
         ctx.accounts.breeding_meta.generation = 0;
@@ -38,10 +38,11 @@ pub mod nft_breeding {
         ctx.accounts.breeding_meta.parent_a = system_program::id();
         ctx.accounts.breeding_meta.parent_b = system_program::id();
         ctx.accounts.breeding_meta.attributes = attributes.clone();
-        ctx.accounts.breeding_meta.breeding = true;
+        ctx.accounts.breeding_meta.breeding = false;
         ctx.accounts.breeding_meta.bump = bump;
         Ok(())
     }
+    
     pub fn compute(ctx: Context<Compute>, bump: u8) -> Result<()> {
         //decide new attributes
         let mut random_seed: Vec<u8> = vec![0];
@@ -59,7 +60,7 @@ pub mod nft_breeding {
                 .data
                 .borrow(),
         );
-        random_seed.extend_from_slice(&ctx.accounts.slot_history.to_account_info().data.borrow());
+        random_seed.extend_from_slice(&ctx.accounts.slot_hashes_account.to_account_info().data.borrow());
         let random = hash(&random_seed).to_bytes().to_vec();
         let mut new_attributes: Vec<Vec<u8>> = vec![];
 
@@ -105,7 +106,7 @@ pub mod nft_breeding {
         for mut attribute in new_attributes.clone() {
             hash_data.append(&mut attribute);
         }
-        let hash_value = hash(&hash_data);
+        let hash_value = hash_to_fix_len(&hash_data);
         let generation = ctx
             .accounts
             .parent_a_breeding_meta
@@ -126,33 +127,31 @@ pub mod nft_breeding {
         ctx.accounts.child_breeding_meta.parent_b =
             ctx.accounts.parent_b_breeding_meta.mint.clone();
         ctx.accounts.child_breeding_meta.attributes = new_attributes.clone();
-        ctx.accounts.child_breeding_meta.breeding = false;
+        ctx.accounts.child_breeding_meta.breeding = true;
         ctx.accounts.child_breeding_meta.bump = bump;
         Ok(())
     }
-    pub fn mint(ctx: Context<Mint_child>) -> Result<()> {
+
+    pub fn mint(ctx: Context<MintChild>) -> Result<()> {
         let creators = Creator {
             share: 100,
             address: ctx.accounts.child_breeding_meta.key(),
             verified: false,
         };
-        let create_metadata_ins = mpl_token_metadata::instruction::create_metadata_accounts_v3(
+        let create_metadata_ins = mpl_token_metadata::instruction::create_metadata_accounts(
             mpl_token_metadata::ID,
             ctx.accounts.new_token_metadata.key(),
             ctx.accounts.new_token.key(),
             ctx.accounts.payer.key(),
             ctx.accounts.payer.key(),
             ctx.accounts.child_breeding_meta.key(),
+            String::from_utf8(ctx.accounts.child_breeding_meta.hash.to_vec()).unwrap(),
             "".to_string(),
-            ctx.accounts.child_breeding_meta.hash.to_string(),
             "".to_string(),
             Some(vec![creators]),
             0,
             false,
             true,
-            None,
-            None,
-            None,
         );
         invoke(&create_metadata_ins, &ctx.accounts.to_account_infos())?;
         let master_edition_ix = mpl_token_metadata::instruction::create_master_edition_v3(
@@ -180,7 +179,8 @@ pub mod nft_breeding {
         ctx.accounts.child_breeding_meta.breeding = false;
         Ok(())
     }
-    pub fn update_uri(ctx: Context<Update_uri>, uri: String) -> Result<()> {
+
+    pub fn update_uri(ctx: Context<UpdateUri>, uri: String) -> Result<()> {
         let creators = Creator {
             share: 100,
             address: ctx.accounts.breeding_meta.key(),
@@ -192,8 +192,8 @@ pub mod nft_breeding {
             ctx.accounts.breeding_meta.key(),
             None,
             Some(DataV2 {
-                name: "".to_string(),
-                symbol: ctx.accounts.breeding_meta.hash.to_string(),
+                name: String::from_utf8(ctx.accounts.breeding_meta.hash.to_vec()).unwrap(),
+                symbol: "".to_string(), 
                 uri: uri,
                 seller_fee_basis_points: 0,
                 collection: None,
@@ -272,19 +272,22 @@ pub struct Compute<'info> {
     )]
     pub parent_b_breeding_meta: Account<'info, BreedingMeta>,
     pub system_program: Program<'info, System>,
+    /// CHECK: safe
     #[account(
-        constraint = slot_history.key() == slot_hashes::id()
+        constraint = slot_hashes_account.key() == slot_hashes::id()
     )]
-    pub slot_history: AccountInfo<'info>,
+    pub slot_hashes_account: AccountInfo<'info>,
 }
 #[derive(Accounts)]
-pub struct Mint_child<'info> {
+pub struct MintChild<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
     #[account(mut)]
     pub new_token: Box<Account<'info, Mint>>,
+    /// CHECK: safe
     #[account(mut)]
     pub new_token_metadata: AccountInfo<'info>,
+    /// CHECK: safe
     #[account(mut)]
     pub new_token_master_edition: AccountInfo<'info>,
     #[account(mut)]
@@ -297,9 +300,14 @@ pub struct Mint_child<'info> {
     pub parent_b_token_account: Box<Account<'info, TokenAccount>>,
     #[account(mut)]
     pub parent_b_token_mint: Box<Account<'info, Mint>>,
+    pub rent: Sysvar<'info, Rent>,
+    /// CHECK: safe
     pub token_program: AccountInfo<'info>,
+    /// CHECK: safe
+    pub metadata_program: AccountInfo<'info>,
+    pub system_program: Program<'info, System>,
 }
-impl<'info> Mint_child<'info> {
+impl<'info> MintChild<'info> {
     fn burn_parent_a_token_from_owner(&self) -> CpiContext<'_, '_, '_, 'info, Burn<'info>> {
         let cpi_accounts = Burn {
             mint: self.parent_a_token_mint.to_account_info().clone(),
@@ -318,7 +326,7 @@ impl<'info> Mint_child<'info> {
     }
 }
 #[derive(Accounts)]
-pub struct Update_uri<'info> {
+pub struct UpdateUri<'info> {
     #[account(mut)]
     pub owner: Signer<'info>,
     #[account(mut,
@@ -331,11 +339,15 @@ pub struct Update_uri<'info> {
     )]
     pub nft_account: Account<'info, TokenAccount>,
     pub nft_mint: Account<'info, Mint>,
+    /// CHECK: safe
+    #[account(mut)]
     pub nft_metadata: AccountInfo<'info>,
+    /// CHECK: safe
+    pub metadata_program: AccountInfo<'info>,
 }
 #[account]
 pub struct BreedingMeta {
-    pub hash: Hash,
+    pub hash: [u8; 32],
     pub generation: u8,
     pub mint: Pubkey,
     pub authority: Pubkey,
@@ -344,4 +356,14 @@ pub struct BreedingMeta {
     pub attributes: Vec<Vec<u8>>,
     pub breeding: bool,
     pub bump: u8,
+}
+
+pub fn hash_to_fix_len(
+    hash_data: &Vec<u8>
+)->[u8;32] {
+    let encoded = hex::encode(hash(hash_data));
+    let src = encoded.as_bytes();
+    let mut hash_value = [0u8; 32];
+    hash_value[..].copy_from_slice(&src[..32]);
+    hash_value
 }
