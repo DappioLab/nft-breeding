@@ -144,6 +144,8 @@ pub mod nft_breeding {
             ctx.accounts.parent_a_breeding_meta.mint.clone();
         ctx.accounts.child_breeding_meta.parent_b =
             ctx.accounts.parent_b_breeding_meta.mint.clone();
+        ctx.accounts.child_breeding_meta.name = ctx.accounts.parent_a_breeding_meta.name.clone();
+        ctx.accounts.child_breeding_meta.symbol = ctx.accounts.parent_a_breeding_meta.symbol.clone();
         ctx.accounts.child_breeding_meta.attributes = new_attributes.clone();
         ctx.accounts.child_breeding_meta.breeding = true;
         ctx.accounts.child_breeding_meta.bump = bump;
