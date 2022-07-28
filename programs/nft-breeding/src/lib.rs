@@ -192,8 +192,8 @@ pub mod nft_breeding {
             ctx.accounts.breeding_meta.key(),
             None,
             Some(DataV2 {
-                name: "".to_string(),
-                symbol: String::from_utf8(ctx.accounts.breeding_meta.hash.to_vec()).unwrap(),
+                name: String::from_utf8(ctx.accounts.breeding_meta.hash.to_vec()).unwrap(),
+                symbol: "".to_string(), 
                 uri: uri,
                 seller_fee_basis_points: 0,
                 collection: None,
@@ -340,7 +340,11 @@ pub struct UpdateUri<'info> {
     pub nft_account: Account<'info, TokenAccount>,
     pub nft_mint: Account<'info, Mint>,
     /// CHECK: safe
+    #[account(mut)]
     pub nft_metadata: AccountInfo<'info>,
+
+    /// CHECK: safe
+    pub metadata_program: AccountInfo<'info>,
 }
 #[account]
 pub struct BreedingMeta {
