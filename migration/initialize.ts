@@ -5,7 +5,7 @@ import { IDL as nftBreedingIDL  } from "../target/types/nft_breeding";
 import { getAccount } from "@solana/spl-token";
 import { assert } from "chai";
 import * as nftBreedingSDK from "../ts"
-import {parentAMint, parentAUriPath, parentBMint, parentBUriPath, childMint, childUri, connection} from "./setting"
+import {parentAMint, parentAUriPath, parentBMint, parentBUriPath, childMint, childUri, connection, collectionName, collectionSymbol} from "./setting"
 
 describe("NFT Breeding", () => {
   const options = anchor.AnchorProvider.defaultOptions();
@@ -31,24 +31,24 @@ describe("NFT Breeding", () => {
 
   it("Initialize", async()=>{
     // initialize parent A
-    const initializeATxn = await nftBreedingSDK.initializeTxn(wallet.publicKey, parentAMint, parentAAttributes, provider);
+    const initializeATxn = await nftBreedingSDK.initializeTxn(wallet.publicKey, parentAMint,collectionName, collectionSymbol, parentAAttributes, provider);
     
     initializeATxn.feePayer = wallet.publicKey;
     initializeATxn.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
     console.log(initializeATxn.serializeMessage().toString("base64"));
 
-    // const resultA = await provider.sendAndConfirm(initializeATxn);
-    // console.log("initialize parent A txn:", resultA);
+    const resultA = await provider.sendAndConfirm(initializeATxn);
+    console.log("initialize parent A txn:", resultA);
 
     // initialize parent B
-    const initializeBTxn = await nftBreedingSDK.initializeTxn(wallet.publicKey, parentBMint, parentBAttributes, provider);
+    const initializeBTxn = await nftBreedingSDK.initializeTxn(wallet.publicKey, parentBMint,collectionName,collectionSymbol, parentBAttributes, provider);
     
     initializeBTxn.feePayer = wallet.publicKey;
     initializeBTxn.recentBlockhash = (await provider.connection.getLatestBlockhash()).blockhash;
     console.log(initializeBTxn.serializeMessage().toString("base64"));
 
-    // const resultB = await provider.sendAndConfirm(initializeBTxn);
-    // console.log("initialize parent B txn:", resultB);
+    const resultB = await provider.sendAndConfirm(initializeBTxn);
+    console.log("initialize parent B txn:", resultB);
 
 
     console.log("\n===============\n")
